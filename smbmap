@@ -1,0 +1,83 @@
+#!/bin/bash
+# Path script: /usr/bin/smbmap
+# Dependencias: apt-get install cifs-utils
+#
+# All users sudo, add line end of file /etc/sudoers
+# %sudo ALL=(root:ALL) NOPASSWD: /sbin/mount.cifs
+# Or:
+# Only usuariox, add line end of file /etc/sudoers
+# usuariox ALL=(root:ALL) NOPASSWD: /sbin/mount.cifs
+#
+# For ~/.smbmap/smb.map, netPath:alias, example:
+# //192.168.200.232/workspace:workspace
+# //192.168.200.232/ambtstb:ambtstb
+#
+# For auto start by user, add line end of file /etc/profile
+# smbmap
+
+checkskel() {
+  if [ ! -e /var/log/samba/log.smbmap ] ; then
+    echo "Please: sudo touch /var/log/samba/log.smbmap"
+    echo "Please: sudo chmod 777 /var/log/samba"
+    return 1
+  fi
+
+  echo "" >> /var/log/samba/log.smbmap 2>&1
+  DATETIME=`date`
+  echo $DATETIME >> /var/log/samba/log.smbmap 2>&1
+
+  if [ ! -d ~/.smbmap ] ; then
+    mkdir ~/.smbmap
+  fi
+  if [ ! -e ~/.smbmap/smb.map ] ; then
+    touch ~/.smbmap/smb.map
+    echo "# Please, add line end of file: netPath:alias, example:" > ~/.smbmap/smb.map
+    echo "# //192.168.200.232/workspace:workspace" >> ~/.smbmap/smb.map
+    echo "# //192.168.200.232/ambtstb:ambtstb" >> ~/.smbmap/smb.map
+  fi
+
+  if [ ! -e /media/$USER/smbmap ] ; then
+    echo "Please: sudo mkdir /media/$USER/smbmap" >> /var/log/samba/log.smbmap 2>&1
+    echo "Please: sudo chmod 777 /media/$USER/smbmap" >> /var/log/samba/log.smbmap 2>&1
+    return 2
+  fi
+
+}
+
+mountsmb() {
+  UIDx=`id -u $USER` 
+  GIDx=`id -g $USER`
+  fARRMAP=`grep -v '#' ~/.smbmap/smb.map`
+  ARRMAP=($fARRMAP)
+  if [ ! "${ARRMAP[1]#*:}" ] ; then
+    echo "Please, add line end of file ~/.smbmap/smb.map: netPath:alias, example:"
+    echo "//192.168.200.232/workspace:workspace"
+    echo "//192.168.200.232/ambtstb:ambtstb"
+    return 3
+  fi
+
+  for MAP in "${ARRMAP[@]}" ; do
+    SOURCE=${MAP%%:*}
+    TARGET=${MAP#*:}
+    mkdir /media/$USER/smbmap/$TARGET > /dev/null 2>&1
+    sudo mount.cifs $SOURCE /media/$USER/smbmap/$TARGET cifs -o username=$USER,password=$SMBPASS,iocharset=utf8,gid=$GIDx,uid=$UIDx,file_mode=0777,dir_mode=0777 >> /var/log/samba/log.smbmap 2>&1 &
+  done
+}
+
+CHKGUI=`echo $TERM`
+if [[ $CHKGUI != "dumb" ]] ; then
+  exit 5
+fi
+
+checkskel > /dev/null 2>&1
+SMBPASS=`zenity --password --title="Mapear pastas da rede" --add-password="smbpass" 2> /dev/null`
+mountsmb >> /var/log/samba/log.smbmap 2>&1
+
+# Return
+case $? in
+  1) 
+    echo "Please: sudo touch /var/log/samba/log.smbmap"
+    echo "Please: sudo chmod 777 /var/log/samba"
+  ;;
+  2) echo "Please: sudo chmod 777 /media/$USER/smbmap";;
+esac
