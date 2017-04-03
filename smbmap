@@ -1,6 +1,10 @@
 #!/bin/bash
+# Source: github.com/henrymelo/smbmap
+# Copyright 2015 Melo, H. R.
+# MIT License
+#
 # Path script: /usr/bin/smbmap
-# Dependencias: apt-get install cifs-utils
+# Dependency: apt-get install cifs-utils
 #
 # All users sudo, add line end of file /etc/sudoers
 # %sudo ALL=(root:ALL) NOPASSWD: /sbin/mount.cifs
@@ -9,8 +13,8 @@
 # usuariox ALL=(root:ALL) NOPASSWD: /sbin/mount.cifs
 #
 # For ~/.smbmap/smb.map, netPath:alias, example:
-# //192.168.200.232/workspace:workspace
-# //192.168.200.232/ambtstb:ambtstb
+# //192.168.0.8/workspace:workspace
+# //192.168.0.8/ambtstb:ambtstb
 #
 # For auto start by user, add line end of file /etc/profile
 # smbmap
@@ -32,8 +36,8 @@ checkskel() {
   if [ ! -e ~/.smbmap/smb.map ] ; then
     touch ~/.smbmap/smb.map
     echo "# Please, add line end of file: netPath:alias, example:" > ~/.smbmap/smb.map
-    echo "# //192.168.200.232/workspace:workspace" >> ~/.smbmap/smb.map
-    echo "# //192.168.200.232/ambtstb:ambtstb" >> ~/.smbmap/smb.map
+    echo "# //192.168.0.8/workspace:workspace" >> ~/.smbmap/smb.map
+    echo "# //192.168.0.8/ambtstb:ambtstb" >> ~/.smbmap/smb.map
   fi
 
   if [ ! -e /media/$USER/smbmap ] ; then
@@ -51,8 +55,8 @@ mountsmb() {
   ARRMAP=($fARRMAP)
   if [ ! "${ARRMAP[1]#*:}" ] ; then
     echo "Please, add line end of file ~/.smbmap/smb.map: netPath:alias, example:"
-    echo "//192.168.200.232/workspace:workspace"
-    echo "//192.168.200.232/ambtstb:ambtstb"
+    echo "//192.168.0.8/workspace:workspace"
+    echo "//192.168.0.8/ambtstb:ambtstb"
     return 3
   fi
 
@@ -60,7 +64,11 @@ mountsmb() {
     SOURCE=${MAP%%:*}
     TARGET=${MAP#*:}
     mkdir /media/$USER/smbmap/$TARGET > /dev/null 2>&1
+
+	### begin “map” protocol MOUNT-CIFS ###
     sudo mount.cifs $SOURCE /media/$USER/smbmap/$TARGET cifs -o username=$USER,password=$SMBPASS,iocharset=utf8,gid=$GIDx,uid=$UIDx,file_mode=0777,dir_mode=0777 >> /var/log/samba/log.smbmap 2>&1 &
+	### end ###
+	
   done
 }
 
